@@ -4,3 +4,8 @@ __pycache__/
 
 *.pt
 *.pth
+
+# Usually you don't want to exclude poetry.lock, but since we may make
+# modifications to the pytorch source, we don't want people to accidentally
+# install a wrong version in the lock file.
+poetry.lock
