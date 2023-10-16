@@ -20,7 +20,8 @@ url = "https://download.pytorch.org/whl/cu118"
 priority = "supplemental"
 
 [tool.poetry.dependencies]
-python = ">=3.10,<3.12"
+# rospy.init_node hangs on python>=3.11
+python = "~3.10"
 # torch = {version = "*", source = "PyTorch CPU"}
 # torchaudio = {version = "*", source = "PyTorch CPU"}
 # torchvision = {version = "*", source = "PyTorch CPU"}
@@ -30,17 +31,25 @@ torchvision = {version = "*", source = "PyTorch CUDA 11.8"}
 matplotlib = "^3.8.0"
 numpy = "^1.26.1"
 opencv-python = "^4.8.1.78"
-pillow = "^10.1.0"
-pyyaml = "^6.0.1"
-requests = "^2.31.0"
-scipy = "^1.11.3"
-tqdm = "^4.66.1"
 pandas = "^2.1.1"
-seaborn = "^0.13.0"
+pillow = "^10.1.0"
 psutil = "^5.9.6"
 py-cpuinfo = "^9.0.0"
+pyyaml = "^6.0.1"
+requests = "^2.31.0"
+rospkg = "^1.5.0"
+scipy = "^1.11.3"
+seaborn = "^0.13.0"
 thop = "^0.1.1.post2209072238"
+tqdm = "^4.66.1"
 ultralytics = "^8.0.199"
+loguru = "^0.7.2"
+
+
+[tool.poetry.group.dev.dependencies]
+black = "^23.9.1"
+mypy = "^1.6.0"
+flake8 = "^6.1.0"
 
 
 [build-system]
