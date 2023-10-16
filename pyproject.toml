@@ -20,7 +20,7 @@ url = "https://download.pytorch.org/whl/cu118"
 priority = "supplemental"
 
 [tool.poetry.dependencies]
-python = ">=3.10,<3.13"
+python = ">=3.10,<3.12"
 # torch = {version = "*", source = "PyTorch CPU"}
 # torchaudio = {version = "*", source = "PyTorch CPU"}
 # torchvision = {version = "*", source = "PyTorch CPU"}
