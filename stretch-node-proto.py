@@ -7,6 +7,8 @@ import cv_bridge
 import rospy
 from sensor_msgs.msg import CompressedImage
 
+from profiler import Profile
+
 
 class Globals:
     bridge = cv_bridge.CvBridge()
@@ -21,10 +23,8 @@ class Globals:
     yolo_pose_pub: rospy.Publisher
 
 
-# TODO: wrapper to calculate inference latency; or just put these callbacks in a
-# class that tracks latency stats
-
 # https://docs.ultralytics.com/modes/predict/
+@Profile(50)
 def rgb_callback(msg: CompressedImage) -> None:
     img = Globals.bridge.compressed_imgmsg_to_cv2(msg)
     img = cv2.rotate(img, cv2.ROTATE_90_CLOCKWISE)
@@ -37,6 +37,7 @@ def rgb_callback(msg: CompressedImage) -> None:
 
 
 # https://docs.ultralytics.com/tasks/
+@Profile(50)
 def skel_callback(msg: CompressedImage) -> None:
     img = Globals.bridge.compressed_imgmsg_to_cv2(msg)
     img = cv2.rotate(img, cv2.ROTATE_90_CLOCKWISE)
@@ -50,7 +51,6 @@ def skel_callback(msg: CompressedImage) -> None:
 
 if __name__ == "__main__":
     rospy.init_node("yolov8")
-    logger.success("node initialized")
 
     Globals.yolo_seg_pub = rospy.Publisher(
         "/yolov8/seg/compressed", CompressedImage, queue_size=1
@@ -77,7 +77,9 @@ if __name__ == "__main__":
         buff_size=5 * 1024**2,
     )
 
-    try:
-        rospy.spin()
-    except KeyboardInterrupt:
-        pass
+    logger.success("node initialized")
+
+    while not rospy.is_shutdown():
+        print(Profile.summary())
+        print()
+        rospy.sleep(1)
