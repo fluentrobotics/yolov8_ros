@@ -6,6 +6,7 @@ __pycache__/
 *.pth
 *.onnx
 *.torchscript
+*openvino_model/
 
 # Usually you don't want to exclude poetry.lock, but since we may make
 # modifications to the pytorch source, we don't want people to accidentally
