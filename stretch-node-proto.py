@@ -16,8 +16,8 @@ class Globals:
     # TODO: try OpenVINO export on Intel CPU-only machines
     # https://docs.ultralytics.com/modes/export/
     # https://docs.ultralytics.com/integrations/openvino/
-    seg_model = YOLO("yolov8m-seg.pt")
-    pose_model = YOLO("yolov8m-pose.pt")
+    seg_model = YOLO("models/yolov8m-seg.pt")
+    pose_model = YOLO("models/yolov8m-pose.pt")
 
     yolo_seg_pub: rospy.Publisher
     yolo_pose_pub: rospy.Publisher
