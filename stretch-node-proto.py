@@ -1,4 +1,5 @@
 import cv2
+import torch
 from loguru import logger
 from ultralytics import YOLO
 from ultralytics.engine.results import Results
@@ -16,8 +17,18 @@ class Globals:
     # TODO: try OpenVINO export on Intel CPU-only machines
     # https://docs.ultralytics.com/modes/export/
     # https://docs.ultralytics.com/integrations/openvino/
-    seg_model = YOLO("models/yolov8m-seg.pt")
-    pose_model = YOLO("models/yolov8m-pose.pt")
+    seg_model = YOLO("models/yolov8s-seg.pt")
+    pose_model = YOLO("models/yolov8s-pose.pt")
+
+    # if True or not torch.cuda.is_available():
+    #     # convert to OpenVino
+    #     # TODO: check if the openvino model already exists
+    #     seg_model.export(format="openvino")
+    #     pose_model.export(format="openvino")
+
+    #     # TODO: de-hardcode these
+    #     seg_model = YOLO("models/yolov8s-seg_openvino_model")
+    #     pose_model = YOLO("models/yolov8s-pose_openvino_model")
 
     yolo_seg_pub: rospy.Publisher
     yolo_pose_pub: rospy.Publisher
