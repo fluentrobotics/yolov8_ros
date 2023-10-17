@@ -11,6 +11,9 @@ from sensor_msgs.msg import CompressedImage
 class Globals:
     bridge = cv_bridge.CvBridge()
 
+    # TODO: try OpenVINO export on Intel CPU-only machines
+    # https://docs.ultralytics.com/modes/export/
+    # https://docs.ultralytics.com/integrations/openvino/
     seg_model = YOLO("yolov8m-seg.pt")
     pose_model = YOLO("yolov8m-pose.pt")
 
@@ -18,12 +21,15 @@ class Globals:
     yolo_pose_pub: rospy.Publisher
 
 
+# TODO: wrapper to calculate inference latency; or just put these callbacks in a
+# class that tracks latency stats
+
 # https://docs.ultralytics.com/modes/predict/
 def rgb_callback(msg: CompressedImage) -> None:
     img = Globals.bridge.compressed_imgmsg_to_cv2(msg)
     img = cv2.rotate(img, cv2.ROTATE_90_CLOCKWISE)
 
-    results: list[Results] = Globals.seg_model.predict(img)
+    results: list[Results] = Globals.seg_model.predict(img, verbose=False)
     annotated_img = results[0].plot()
 
     annotated_msg = Globals.bridge.cv2_to_compressed_imgmsg(annotated_img)
@@ -35,7 +41,7 @@ def skel_callback(msg: CompressedImage) -> None:
     img = Globals.bridge.compressed_imgmsg_to_cv2(msg)
     img = cv2.rotate(img, cv2.ROTATE_90_CLOCKWISE)
 
-    results: list[Results] = Globals.pose_model.predict(img)
+    results: list[Results] = Globals.pose_model.predict(img, verbose=False)
     annotated_img = results[0].plot()
 
     annotated_msg = Globals.bridge.cv2_to_compressed_imgmsg(annotated_img)
