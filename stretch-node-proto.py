@@ -80,6 +80,7 @@ if __name__ == "__main__":
     logger.success("node initialized")
 
     while not rospy.is_shutdown():
-        print(Profile.summary())
-        print()
+        summary = Profile.summary()
+        if summary:
+            print(summary, end="\n\n")
         rospy.sleep(1)
