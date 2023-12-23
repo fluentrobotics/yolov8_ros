@@ -33,6 +33,9 @@ class YoloSkeletonRightWristNode:
         camera_info_topic: str = rospy.get_param(
             "camera_info_topic", default="/camera/aligned_depth_to_color/camera_info"
         )
+        self._stretch_robot_rotate_image_90deg: bool = rospy.get_param(
+            "stretch_robot_rotate_image_90deg", default=True
+        )
 
         self._wrist_position_pub = rospy.Publisher(
             "/yolov8/pose/right_wrist", PointStamped, queue_size=1
@@ -106,8 +109,8 @@ class YoloSkeletonRightWristNode:
             self._cv_bridge.imgmsg_to_cv2(self._depth_msg).astype(np.float32) / 1000.0
         )
 
-        # TODO(elvout): this should be controlled with a flag
-        bgr_image = cv2.rotate(bgr_image, cv2.ROTATE_90_CLOCKWISE)
+        if self._stretch_robot_rotate_image_90deg:
+            bgr_image = cv2.rotate(bgr_image, cv2.ROTATE_90_CLOCKWISE)
 
         results: list[Results] = self._model.predict(bgr_image, verbose=False)
 
@@ -144,9 +147,13 @@ class YoloSkeletonRightWristNode:
             return
 
         # Find the pixel coordinate in the un-rotated image so we can query the
-        # depth image. TODO(elvout): again this should be controlled with a flag
-        y = bgr_image.shape[1] - right_wrist_pixel_xy[0]
-        x = right_wrist_pixel_xy[1]
+        # depth image.
+        if self._stretch_robot_rotate_image_90deg:
+            y = bgr_image.shape[1] - right_wrist_pixel_xy[0]
+            x = right_wrist_pixel_xy[1]
+        else:
+            x, y = right_wrist_pixel_xy
+
         depth = depth_image[int(y), int(x)]
 
         # We can't do anything without valid depth information.
