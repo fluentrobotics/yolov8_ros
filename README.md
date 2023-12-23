@@ -1,13 +1,7 @@
-# YOLOv8 Virtual Environment
+# YOLOv8 ROS Integration
 
 This repository contains a [Poetry][poetry-home] virtual environment
-specification to use Ultralytics YOLOv8.
-
-> [!Note]
-> Ultralytics provides alternative installation methods including Conda and
-> Docker. See <https://github.com/ultralytics/ultralytics>
-
-Table of Contents
+to use Ultralytics YOLOv8 with ROS 1 Noetic.
 
 [poetry-home]: https://python-poetry.org/
 
@@ -15,13 +9,12 @@ Table of Contents
 
 ### Install Python 3.10 (Ubuntu 20.04 only)
 
-#### Option 1: Deadsnakes Ubuntu PPA
-
 The [Deadsnakes Ubuntu PPA][deadsnakes] provides newer Python versions that are
 not present in the official package repositories. These commands will set up the
 PPA and install the required Python 3.10 packages:
 
 ```shell
+$ sudo apt update && sudo apt install software-properties-common
 $ sudo add-apt-repository ppa:deadsnakes/ppa
 $ sudo apt update
 $ sudo apt install python3.10 python3.10-distutils python3.10-venv
@@ -29,69 +22,33 @@ $ sudo apt install python3.10 python3.10-distutils python3.10-venv
 
 [deadsnakes]: <https://launchpad.net/~deadsnakes/+archive/ubuntu/ppa>
 
-#### Option 2: Build from source
+### Install dependencies to a virtual environment
 
-Follow Section 2.2 from the [Python documentation][python-build].
+#### Automatic Setup
 
-[python-build]: <https://docs.python.org/3.10/using/unix.html>
+This repository is set up to build using `catkin` and/or `cmake`. The build
+process installs the Poetry dependency manager if it is not already present on
+the system and installs Python dependencies.
 
-### Install the Poetry Python dependency manager
-
-Follow the instructions [here][poetry-install]. If you want to install Poetry
-system-wide, follow the instructions in Section 2 "Install Poetry (advanced)"
-to set `POETRY_HOME`.
-
-Afterwards, verify that Poetry is installed and in your `$PATH`.
+If this package is within a `catkin` workspace, run `catkin build` within the
+workspace. Otherwise, you can run `cmake` directly from the top-level directory
+of this repository:
 
 ```shell
-$ poetry about
-Poetry - Package Management for Python
-
-Version: 1.6.1
-Poetry-Core Version: 1.7.0
-
-Poetry is a dependency manager tracking local dependencies of your projects and libraries.
-See https://github.com/python-poetry/poetry for more information.
+cmake -B build
+cmake --build build
 ```
+
+#### Manual Setup
+
+Follow the instructions [here][poetry-install] to install `poetry`. Afterwards,
+run `poetry install --no-root` to install Python dependencies.
 
 [poetry-install]: <https://python-poetry.org/docs/#installation>
 
-#### Recommended post-installation steps
+### (Optional) Run YOLO Checks
 
-Configure Poetry to put virtual environment directories in the project
-directory. Virtual environments will be installed to `$PROJECT_DIR/.venv`.
-
-```shell
-poetry config virtualenvs.in-project true
-```
-
-### Install the Virtual Environment
-
-> [!Note]
-> If you do not intend to use CUDA, change the PyTorch packages in
-> [`pyproject.toml`](./pyproject.toml) from CUDA to CPU by swapping the comment
-> status of these lines:
->
-> ```toml
-> # torch = {version = "*", source = "PyTorch CPU"}
-> # torchaudio = {version = "*", source = "PyTorch CPU"}
-> # torchvision = {version = "*", source = "PyTorch CPU"}
-> torch = {version = "*", source = "PyTorch CUDA 11.8"}
-> torchaudio = {version = "*", source = "PyTorch CUDA 11.8"}
-> torchvision = {version = "*", source = "PyTorch CUDA 11.8"}
-> ```
->
-> This will save a considerable amount of time and disk space.
-
-Run
-
-```shell
-poetry install --no-root
-```
-
-### Running Checks
-
-After the virtual environment is installed you can activate it by running
+After the virtual environment is initialized you can activate it by running
 
 ```shell
 poetry shell

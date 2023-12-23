@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>yolov8-ros</name>
+  <version>0.0.0</version>
+  <description>ROS integration for Ultralytics YOLOv8</description>
+
+  <maintainer email="eyy@umich.edu">Elvin Yang</maintainer>
+
+
+  <!-- ultralytics is released under AGPL-3.0 -->
+  <license>AGPL-3.0</license>
+
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <exec_depend>rospy</exec_depend>
+</package>

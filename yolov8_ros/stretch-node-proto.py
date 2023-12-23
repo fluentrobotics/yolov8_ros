@@ -8,7 +8,7 @@ import cv_bridge
 import rospy
 from sensor_msgs.msg import CompressedImage
 
-from profiler import Profile
+from yolov8_ros.profiler import Profile
 
 
 class Globals:
@@ -17,8 +17,8 @@ class Globals:
     # TODO: try OpenVINO export on Intel CPU-only machines
     # https://docs.ultralytics.com/modes/export/
     # https://docs.ultralytics.com/integrations/openvino/
-    seg_model = YOLO("models/yolov8s-seg.pt")
-    pose_model = YOLO("models/yolov8s-pose.pt")
+    seg_model = YOLO("models/yolov8x-seg.pt")
+    pose_model = YOLO("models/yolov8x-pose.pt")
 
     # if True or not torch.cuda.is_available():
     #     # convert to OpenVino
@@ -70,13 +70,13 @@ if __name__ == "__main__":
         "/yolov8/pose/compressed", CompressedImage, queue_size=1
     )
 
-    rospy.Subscriber(
-        "/camera/color/image_raw/compressed",
-        CompressedImage,
-        rgb_callback,
-        queue_size=1,
-        buff_size=5 * 1024**2,
-    )
+    # rospy.Subscriber(
+    #     "/camera/color/image_raw/compressed",
+    #     CompressedImage,
+    #     rgb_callback,
+    #     queue_size=1,
+    #     buff_size=5 * 1024**2,
+    # )
     # There may be a better way provide multiple callbacks to a subscriber.
     # queue_size and buff_size need to be equal to the previous subscriber's,
     # otherwise bad things will happen

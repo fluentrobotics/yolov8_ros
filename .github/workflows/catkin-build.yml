@@ -1,0 +1,33 @@
+name: catkin build CI
+
+on: push
+
+jobs:
+  build:
+    # Although the build is run inside a 20.04 container, we need to explicitly
+    # specify 20.04 here so actions/setup-python installs the right Python 3.10
+    # binary.
+    runs-on: ubuntu-20.04
+    container:
+      image: osrf/ros:noetic-desktop
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: "src/${{ github.repository_id }}"
+      - name: Inspect directory contents
+        run: apt-get update && apt-get install --yes tree && pwd && tree
+      - uses: actions/setup-python@v5
+        with:
+          python-version: |
+            3.10
+            3.8
+      - name: Install build dependencies
+        run: python3.8 -m pip install catkin-pkg catkin-tools empy
+      - name: Run catkin build
+        run: . /opt/ros/noetic/setup.sh && catkin build --no-status
+      - name: Run yolo checks
+        run: |
+          .venv/bin/yolo check | tee check.log
+          ! grep -q "❌" check.log
+        working-directory: "${{ github.workspace }}/src/${{ github.repository_id }}"
