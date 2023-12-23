@@ -12,12 +12,17 @@ if __name__ == "__main__":
         if isinstance(v, ModuleType) and hasattr(v, "main"):
             valid_modules.append(k)
 
-    argparser = argparse.ArgumentParser()
+    argparser = argparse.ArgumentParser(prefix_chars="_")
+    # roslaunch appends an argument "__name:=name_of_node_in_launch_file"
     argparser.add_argument(
-        "module", type=str, help="Module to run", choices=valid_modules
+        "__name:",
+        type=str,
+        choices=valid_modules,
+        required=True,
+        help="Module to run",
     )
 
     namespace, _ = argparser.parse_known_args()
-    module: str = namespace.module
+    module_name: str = namespace.__getattribute__("name:")
 
-    yolov8_ros.__getattribute__(module).main()
+    yolov8_ros.__getattribute__(module_name).main()

@@ -9,7 +9,6 @@
     name="right_wrist_node"
     launch-prefix="$(find yolov8-ros)/.venv/bin/python"
     type="python_entrypoint.py"
-    args="right_wrist_node"
     output="screen"
   >
     <param name="depth_topic" value="$(arg depth_topic)" />
