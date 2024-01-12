@@ -14,37 +14,27 @@ not present in the official package repositories. These commands will set up the
 PPA and install the required Python 3.10 packages:
 
 ```shell
-$ sudo apt update && sudo apt install software-properties-common
-$ sudo add-apt-repository ppa:deadsnakes/ppa
-$ sudo apt update
-$ sudo apt install python3.10 python3.10-distutils python3.10-venv
+apt update && apt install software-properties-common
+add-apt-repository ppa:deadsnakes/ppa
+apt update
+apt install python3.10 python3.10-distutils python3.10-venv
 ```
 
 [deadsnakes]: <https://launchpad.net/~deadsnakes/+archive/ubuntu/ppa>
 
 ### Install dependencies to a virtual environment
 
-#### Automatic Setup
-
 This repository is set up to build using `catkin` and/or `cmake`. The build
 process installs the Poetry dependency manager if it is not already present on
-the system and installs Python dependencies.
+the system and installs Python dependencies to `.venv`.
 
 If this package is within a `catkin` workspace, run `catkin build` within the
 workspace. Otherwise, you can run `cmake` directly from the top-level directory
 of this repository:
 
 ```shell
-cmake -B build
-cmake --build build
+cmake -B build && cmake --build build
 ```
-
-#### Manual Setup
-
-Follow the instructions [here][poetry-install] to install `poetry`. Afterwards,
-run `poetry install --no-root` to install Python dependencies.
-
-[poetry-install]: <https://python-poetry.org/docs/#installation>
 
 ### (Optional) Run YOLO Checks
 
@@ -54,7 +44,7 @@ After the virtual environment is initialized you can activate it by running
 poetry shell
 ```
 
-Then, run YOLO status checks using `yolo check`. You should see similar output
+Then, run YOLO status checks using `yolo check`. You should see output similar
 to below:
 
 ```shell
@@ -85,4 +75,28 @@ seaborn             ✅ 0.13.0>=0.11.0
 psutil              ✅ 5.9.6
 py-cpuinfo          ✅ 9.0.0
 thop                ✅ 0.1.1-2209072238>=0.1.1
+```
+
+## Running ROS Nodes
+
+There are multiple ways to run ROS nodes depending on context.
+
+### Launch Files
+
+If you are in a catkin workspace, source `devel/setup.$(basename $SHELL)` in the
+top level of the workspace and then run `roslaunch yolov8-ros $LAUNCH_FILE_NAME`,
+where `$LAUNCH_FILE_NAME` is the name of one of the files in
+[`launch/`](/launch/).
+
+### Direct Invocation
+
+Using the virtual environment directly is sometimes easier for prototyping and
+testing. From the top level of this repository,
+
+```shell
+# Activate the virtual environment
+poetry shell
+
+# Run the node as a Python module, e.g.,
+python3 -m yolov8_ros.right_wrist_node
 ```
