@@ -19,14 +19,16 @@
 #    i.e., without knowing the names "package1", "package2", "module_a", or
 #    "module_b".
 # 2. Read the name of a node spawned by an invocation of this script from a
-#    launch file and run the main() method of the respective module.
+#    launch file and run the main() method of the respective module, again
+#    without knowing the name of the package that the (uniquely named) module
+#    belongs to.
 
 import argparse
 import importlib.util
 import pkgutil
 import sys
-from types import FunctionType, ModuleType
 from pathlib import Path
+from types import FunctionType, ModuleType
 
 
 def find_valid_modules() -> dict[str, ModuleType]:
@@ -43,23 +45,31 @@ def find_valid_modules() -> dict[str, ModuleType]:
 
     # Find valid modules within this project's packages.
     for package_info in project_packages_info:
-        package_spec = package_info.module_finder.find_spec(package_info.name, str(project_dir))  # type: ignore
+        # Import the package since submodules may reference the package by
+        # themselves importing from it. This process is somewhat convoluted and
+        # filled with landmines:
+        # https://docs.python.org/3.10/library/importlib.html#checking-if-a-module-can-be-imported
+        package_spec = package_info.module_finder.find_spec(package_info.name)  # type: ignore
         if package_spec is None or package_spec.loader is None:
             continue
-
-        # Importing the package is somewhat convoluted.
-        # https://docs.python.org/3.10/library/importlib.html#checking-if-a-module-can-be-imported
         package = importlib.util.module_from_spec(package_spec)
         sys.modules[package_info.name] = package
         package_spec.loader.exec_module(package)
 
-        # Find modules within this package that have a main() function.
-        for k, v in package.__dict__.items():
+        for submodule_info in pkgutil.iter_modules(
+            path=package_spec.submodule_search_locations
+        ):
+            # Import the submodule to inspect its contents. Note that it does
+            # not seem to be necessary to modify sys.modules here.
+            submodule_spec = submodule_info.module_finder.find_spec(submodule_info.name)  # type: ignore
+            if submodule_spec is None or submodule_spec.loader is None:
+                continue
+            submodule = importlib.util.module_from_spec(submodule_spec)
+            submodule_spec.loader.exec_module(submodule)
+
             try:
-                if isinstance(v, ModuleType) and isinstance(
-                    getattr(v, "main"), FunctionType
-                ):
-                    valid_modules[k] = v
+                if isinstance(getattr(submodule, "main"), FunctionType):
+                    valid_modules[submodule_info.name] = submodule
             except AttributeError:
                 pass
 

@@ -22,7 +22,3 @@ def get_model_download_dir() -> Path:
     # If the .venv folder could not be found, just use the current working
     # directory.
     return Path("models")
-
-
-# Import modules to make them discoverable as attributes
-from . import right_wrist_node  # noqa: F401, E402
