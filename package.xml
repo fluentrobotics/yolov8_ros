@@ -1,17 +1,21 @@
 <?xml version="1.0"?>
-<package format="2">
-  <name>yolov8-ros</name>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>yolov8_ros</name>
   <version>0.0.0</version>
   <description>ROS integration for Ultralytics YOLOv8</description>
-
   <maintainer email="eyy@umich.edu">Elvin Yang</maintainer>
-
-
   <!-- ultralytics is released under AGPL-3.0 -->
   <license>AGPL-3.0</license>
 
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>builtin_interfaces</exec_depend>
+  <exec_depend>cv_bridge</exec_depend>
+  <exec_depend>geometry_msgs</exec_depend>
+  <exec_depend>sensor_msgs</exec_depend>
+  <exec_depend>visualization_msgs</exec_depend>
 
-  <buildtool_depend>catkin</buildtool_depend>
-
-  <exec_depend>rospy</exec_depend>
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
 </package>
