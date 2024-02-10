@@ -1,0 +1,25 @@
+name: colcon build
+
+on: push
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    container:
+      image: osrf/ros:humble-desktop
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: "src/${{ github.repository_id }}"
+      - name: Inspect directory contents
+        run: apt-get update && apt-get install --yes tree && pwd && tree
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+      - name: Run colcon build
+        run: . /opt/ros/humble/setup.sh && colcon build --symlink-install
+      - name: Run yolo checks
+        run: |
+          .venv/bin/yolo check | tee check.log
+          ! grep -q "❌" check.log
+        working-directory: "${{ github.workspace }}/src/${{ github.repository_id }}"
