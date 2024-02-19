@@ -17,6 +17,7 @@ from sensor_msgs.msg import CameraInfo, CompressedImage, Image
 from visualization_msgs.msg import Marker
 
 from yolov8_ros import logger, get_model_download_dir
+from yolov8_ros.parameters import YoloSkeletonRightWristNodeParams
 
 
 class YoloSkeletonRightWristNode(Node):
@@ -30,26 +31,13 @@ class YoloSkeletonRightWristNode(Node):
 
     def __init__(self) -> None:
         super().__init__("yolov8_right_wrist")
-        self._model = YOLO(get_model_download_dir() / "yolov8x-pose.pt")
+
+        self._params = YoloSkeletonRightWristNodeParams.read_from_ros(self)
+        self._model = YOLO(get_model_download_dir() / self._params.yolov8_model_name)
 
         #####################
         # ROS-related setup #
         #####################
-        # Subscribe to the uncompressed image since there seems to be some
-        # difficulty subscribing to the /compressedDepth topic.
-        depth_topic: str = self.declare_parameter(
-            "depth_topic", "/camera/aligned_depth_to_color/image_raw"
-        ).value
-        rgb_topic: str = self.declare_parameter(
-            "rgb_topic", "/camera/color/image_raw/compressed"
-        ).value
-        camera_info_topic: str = self.declare_parameter(
-            "camera_info_topic", "/camera/aligned_depth_to_color/camera_info"
-        ).value
-        self._stretch_robot_rotate_image_90deg: bool = self.declare_parameter(
-            "stretch_robot_rotate_image_90deg", True
-        ).value
-
         self._wrist_position_pub = self.create_publisher(
             PointStamped, "/yolov8/pose/right_wrist", 1
         )
@@ -70,13 +58,16 @@ class YoloSkeletonRightWristNode(Node):
         # TODO(elvout): how to we make sure these messages are synchronized?
         # Maybe track timestamps and only use timestamps with both messages
         self._camera_info_sub = self.create_subscription(
-            CameraInfo, camera_info_topic, self._camera_info_callback, 1
+            CameraInfo,
+            self._params.camera_info_sub_topic,
+            self._camera_info_callback,
+            1,
         )
         self._rgb_sub = self.create_subscription(
-            CompressedImage, rgb_topic, self._rgb_callback, 1
+            CompressedImage, self._params.rgb_sub_topic, self._rgb_callback, 1
         )
         self._depth_sub = self.create_subscription(
-            Image, depth_topic, self._depth_callback, 1
+            Image, self._params.depth_sub_topic, self._depth_callback, 1
         )
 
         # TODO(elvout): switch to ros service
@@ -149,7 +140,7 @@ class YoloSkeletonRightWristNode(Node):
             self._rgb_msg = None
             self._depth_msg = None
 
-        if self._stretch_robot_rotate_image_90deg:
+        if self._params.stretch_robot_rotate_image_90deg:
             bgr_image = cv2.rotate(bgr_image, cv2.ROTATE_90_CLOCKWISE)
 
         results: list[Results] = self._model.predict(bgr_image, verbose=False)
@@ -188,7 +179,7 @@ class YoloSkeletonRightWristNode(Node):
 
         # Find the pixel coordinate in the un-rotated image so we can query the
         # depth image.
-        if self._stretch_robot_rotate_image_90deg:
+        if self._params.stretch_robot_rotate_image_90deg:
             y = bgr_image.shape[1] - right_wrist_pixel_xy[0]
             x = right_wrist_pixel_xy[1]
         else:
