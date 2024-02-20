@@ -1,3 +1,5 @@
+import sys
+import threading
 from typing import Optional
 
 import cv2
@@ -6,17 +8,28 @@ import torch
 from ultralytics import YOLO
 from ultralytics.engine.results import Results
 
-import rospy
+import rclpy
+from builtin_interfaces.msg import Time
 from cv_bridge import CvBridge
 from geometry_msgs.msg import PointStamped
+from rclpy.node import Node
 from sensor_msgs.msg import CameraInfo, CompressedImage, Image
 from visualization_msgs.msg import Marker
 
 from yolov8_ros import logger, get_model_download_dir
 
 
-class YoloSkeletonRightWristNode:
+class YoloSkeletonRightWristNode(Node):
+    """
+    This node estimates the 3D position of the right wrist of a human from RGBD
+    images.
+
+    The assumption is made that the human is facing the robot and the right
+    wrist of the human is not occluded.
+    """
+
     def __init__(self) -> None:
+        super().__init__("yolov8_right_wrist")
         self._model = YOLO(get_model_download_dir() / "yolov8x-pose.pt")
 
         #####################
@@ -24,59 +37,75 @@ class YoloSkeletonRightWristNode:
         #####################
         # Subscribe to the uncompressed image since there seems to be some
         # difficulty subscribing to the /compressedDepth topic.
-        depth_topic: str = rospy.get_param(
-            "depth_topic", default="/camera/aligned_depth_to_color/image_raw"
+        depth_topic: str = self.declare_parameter(
+            "depth_topic", "/camera/aligned_depth_to_color/image_raw"
+        ).value
+        rgb_topic: str = self.declare_parameter(
+            "rgb_topic", "/camera/color/image_raw/compressed"
+        ).value
+        camera_info_topic: str = self.declare_parameter(
+            "camera_info_topic", "/camera/aligned_depth_to_color/camera_info"
+        ).value
+        self._stretch_robot_rotate_image_90deg: bool = self.declare_parameter(
+            "stretch_robot_rotate_image_90deg", True
+        ).value
+
+        self._wrist_position_pub = self.create_publisher(
+            PointStamped, "/yolov8/pose/right_wrist", 1
         )
-        rgb_topic: str = rospy.get_param(
-            "rgb_topic", default="/camera/color/image_raw/compressed"
+        self._debug_marker_pub = self.create_publisher(
+            Marker, "/yolov8/markers/right_wrist", 1
         )
-        camera_info_topic: str = rospy.get_param(
-            "camera_info_topic", default="/camera/aligned_depth_to_color/camera_info"
-        )
-        self._stretch_robot_rotate_image_90deg: bool = rospy.get_param(
-            "stretch_robot_rotate_image_90deg", default=True
+        self._debug_img_pub = self.create_publisher(
+            CompressedImage, "/yolov8/pose/vis/compressed", 1
         )
 
-        self._wrist_position_pub = rospy.Publisher(
-            "/yolov8/pose/right_wrist", PointStamped, queue_size=1
-        )
-        self._debug_marker_pub = rospy.Publisher(
-            "/yolov8/markers/right_wrist", Marker, queue_size=1
-        )
-        self._debug_img_pub = rospy.Publisher(
-            "/yolov8/pose/vis/compressed", CompressedImage, queue_size=1
-        )
-
-        # Perform a blocking read of a single CameraInfo message instead of
-        # creating a persistent subscriber.
-        logger.info("Waiting 5s for CameraInfo...")
-        camera_info_msg: CameraInfo = rospy.wait_for_message(
-            camera_info_topic, CameraInfo, timeout=5
-        )
-        self._intrinsic_matrix = np.array(camera_info_msg.K).reshape((3, 3))
+        # Data used by subscribers and callbacks
+        self._msg_lock = threading.Lock()
+        self._intrinsic_matrix: Optional[np.ndarray] = None
         self._rgb_msg: Optional[CompressedImage] = None
         self._depth_msg: Optional[Image] = None
         self._cv_bridge = CvBridge()
 
         # TODO(elvout): how to we make sure these messages are synchronized?
         # Maybe track timestamps and only use timestamps with both messages
-        self._rgb_sub = rospy.Subscriber(
-            rgb_topic, CompressedImage, self._rgb_callback, queue_size=1
+        self._camera_info_sub = self.create_subscription(
+            CameraInfo, camera_info_topic, self._camera_info_callback, 1
         )
-        self._depth_sub = rospy.Subscriber(
-            depth_topic, Image, self._depth_callback, queue_size=1
+        self._rgb_sub = self.create_subscription(
+            CompressedImage, rgb_topic, self._rgb_callback, 1
         )
+        self._depth_sub = self.create_subscription(
+            Image, depth_topic, self._depth_callback, 1
+        )
+
+        # TODO(elvout): switch to ros service
+        self._timer = self.create_timer(1 / 15, self.run_inference_and_publish_pose)
+
+    def _camera_info_callback(self, msg: CameraInfo) -> None:
+        with self._msg_lock:
+            self._intrinsic_matrix = np.array(msg.k).reshape((3, 3))
+
+        # Assuming that the intrinsic matrix does not change, we only need to
+        # receive one CameraInfo message. In ROS 1, we used
+        # rospy.wait_for_message to avoid keeping track of a Subscriber object.
+        # ROS 2 Humble does not have this feature (although it has since been
+        # introduced https://github.com/ros2/rclpy/pull/960), so we manually
+        # destroy the Subscription after receiving the CameraInfo message.
+        self.destroy_subscription(self._camera_info_sub)
 
     def _rgb_callback(self, msg: CompressedImage) -> None:
-        self._rgb_msg = msg
+        with self._msg_lock:
+            self._rgb_msg = msg
 
     def _depth_callback(self, msg: Image) -> None:
-        self._depth_msg = msg
+        with self._msg_lock:
+            self._depth_msg = msg
 
     def _point_to_marker(self, point: PointStamped) -> Marker:
         marker = Marker()
         marker.header.frame_id = point.header.frame_id
-        marker.header.stamp = rospy.Time(0)
+        marker.header.stamp = Time()
 
         marker.type = Marker.ARROW
         marker.scale.x = 0.25
@@ -99,15 +128,26 @@ class YoloSkeletonRightWristNode:
         return marker
 
     def run_inference_and_publish_pose(self) -> None:
-        if self._rgb_msg is None or self._depth_msg is None:
-            return
+        with self._msg_lock:
+            if (
+                self._intrinsic_matrix is None
+                or self._rgb_msg is None
+                or self._depth_msg is None
+            ):
+                return
 
-        rgb_msg_header = self._rgb_msg.header
+            rgb_msg_header = self._rgb_msg.header
 
-        bgr_image = self._cv_bridge.compressed_imgmsg_to_cv2(self._rgb_msg)
-        depth_image = (
-            self._cv_bridge.imgmsg_to_cv2(self._depth_msg).astype(np.float32) / 1000.0
-        )
+            bgr_image = self._cv_bridge.compressed_imgmsg_to_cv2(self._rgb_msg)
+            depth_image = (
+                self._cv_bridge.imgmsg_to_cv2(self._depth_msg).astype(np.float32)
+                / 1000.0
+            )
+
+            # Discard existing messages so that inference is only run again once
+            # we have new data.
+            self._rgb_msg = None
+            self._depth_msg = None
 
         if self._stretch_robot_rotate_image_90deg:
             bgr_image = cv2.rotate(bgr_image, cv2.ROTATE_90_CLOCKWISE)
@@ -160,15 +200,15 @@ class YoloSkeletonRightWristNode:
         if depth == 0:
             return
 
-        P_camera_rightwrist = (
+        P_camera_rightwrist: np.ndarray = (
             depth * np.linalg.inv(self._intrinsic_matrix) @ np.array([[x], [y], [1]])
         )
 
         point_msg = PointStamped()
         point_msg.header = rgb_msg_header
-        point_msg.point.x = P_camera_rightwrist[0]
-        point_msg.point.y = P_camera_rightwrist[1]
-        point_msg.point.z = P_camera_rightwrist[2]
+        point_msg.point.x = P_camera_rightwrist[0].item()
+        point_msg.point.y = P_camera_rightwrist[1].item()
+        point_msg.point.z = P_camera_rightwrist[2].item()
         self._wrist_position_pub.publish(point_msg)
 
         marker_msg = self._point_to_marker(point_msg)
@@ -182,15 +222,12 @@ class YoloSkeletonRightWristNode:
 
 
 def main() -> None:
-    rospy.init_node("yolov8_right_wrist")
-    node = YoloSkeletonRightWristNode()
+    rclpy.init(args=sys.argv)
 
+    node = YoloSkeletonRightWristNode()
     logger.success("node initialized")
 
-    # TODO(elvout): switch to ros service
-    while not rospy.is_shutdown():
-        node.run_inference_and_publish_pose()
-        rospy.sleep(0.05)
+    rclpy.spin(node)
 
 
 if __name__ == "__main__":
