@@ -9,7 +9,7 @@ from ultralytics import YOLO
 from ultralytics.engine.results import Results
 
 import rclpy
-from builtin_interfaces.msg import Time
+from builtin_interfaces.msg import Duration, Time
 from cv_bridge import CvBridge
 from geometry_msgs.msg import PointStamped
 from rclpy.node import Node
@@ -98,23 +98,19 @@ class YoloSkeletonRightWristNode(Node):
         marker.header.frame_id = point.header.frame_id
         marker.header.stamp = Time()
 
-        marker.type = Marker.ARROW
-        marker.scale.x = 0.25
-        marker.scale.y = 0.05
-        marker.scale.z = 0.05
+        marker.lifetime = Duration(sec=0, nanosec=int(1e9 / 15) * 2)
+        marker.type = Marker.SPHERE
+        marker.scale.x = 0.15
+        marker.scale.y = 0.15
+        marker.scale.z = 0.15
         marker.color.a = 1.0
         marker.color.r = 1.0
         marker.color.g = 0.0
         marker.color.b = 1.0
 
-        marker.pose.position.x = point.point.x - marker.scale.x
+        marker.pose.position.x = point.point.x
         marker.pose.position.y = point.point.y
         marker.pose.position.z = point.point.z
-
-        marker.pose.orientation.x = 0.7071068
-        marker.pose.orientation.y = 0.0
-        marker.pose.orientation.z = 0.0
-        marker.pose.orientation.w = 0.7071068
 
         return marker
 
