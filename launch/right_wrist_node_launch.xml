@@ -1,0 +1,22 @@
+<launch>
+  <arg name="rgb_sub_topic" default="/camera/color/image_raw/compressed" />
+  <arg name="depth_sub_topic" default="/camera/aligned_depth_to_color/image_raw" />
+  <arg name="camera_info_sub_topic" default="/camera/color/camera_info" />
+  <arg name="stretch_robot_rotate_image_90deg" default="true" />
+
+  <node
+    pkg="yolov8_ros"
+    name="right_wrist_node"
+    launch-prefix="$(find-pkg-prefix yolov8_ros)/.venv/bin/python"
+    exec="python_entrypoint.py"
+    output="screen"
+  >
+    <!-- yolov8_ros/parameters.py contains documentation of all parameters
+    declared by this node. This file may contain multiple classes. Be sure to
+    check the one matching this node's name. -->
+    <param name="rgb_sub_topic" value="$(var rgb_sub_topic)" />
+    <param name="depth_sub_topic" value="$(var depth_sub_topic)" />
+    <param name="camera_info_sub_topic" value="$(var camera_info_sub_topic)" />
+    <param name="stretch_robot_rotate_image_90deg" value="$(var stretch_robot_rotate_image_90deg)" />
+  </node>
+</launch>

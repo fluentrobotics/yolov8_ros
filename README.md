@@ -1,54 +1,45 @@
 # YOLOv8 ROS Integration
 
-This repository contains a [Poetry][poetry-home] virtual environment
-to use Ultralytics YOLOv8 with ROS 1 Noetic.
-
-[poetry-home]: https://python-poetry.org/
+This repository contains Python modules and a dependency specification to use
+Ultralytics YOLOv8 with ROS 2. Additional documentation about how this
+repository is organized can be found in [`ARCHITECTURE.md`](/ARCHITECTURE.md).
 
 ## Getting Started
 
-### Install Python 3.10 (Ubuntu 20.04 only)
+### Requirements
 
-The [Deadsnakes Ubuntu PPA][deadsnakes] provides newer Python versions that are
-not present in the official package repositories. These commands will set up the
-PPA and install the required Python 3.10 packages:
+- ROS 2 Humble
+- Python 3.10
+  - Included with Ubuntu 22.04
+  - For other supported Ubuntu LTS distributions, the [Deadsnakes Ubuntu
+    PPA][deadsnakes] provides the required `python3.10 python3.10-distutils
+    python3.10-venv` packages.
+- The [Poetry][poetry-docs] dependency manager
+- A CUDA 11.8.x runtime environment
 
-```shell
-apt update && apt install software-properties-common
-add-apt-repository ppa:deadsnakes/ppa
-apt update
-apt install python3.10 python3.10-distutils python3.10-venv
-```
-
-[deadsnakes]: <https://launchpad.net/~deadsnakes/+archive/ubuntu/ppa>
+[deadsnakes]: https://launchpad.net/~deadsnakes/+archive/ubuntu/ppa
+[poetry-docs]: https://python-poetry.org/docs/
 
 ### Install dependencies to a virtual environment
 
-This repository is set up to build using `catkin` and/or `cmake`. The build
-process installs the Poetry dependency manager if it is not already present on
-the system and installs Python dependencies to `.venv`.
+This repository uses Poetry to install dependencies to a virtual environment.
+The virtual environment is located at the top level of this repository
+regardless of the next command used to initialize it.
 
-If this package is within a `catkin` workspace, run `catkin build` within the
-workspace. Otherwise, you can run `cmake` directly from the top-level directory
-of this repository:
+If you are developing outside of a ROS 2 workspace, run `poetry install
+--no-root` within this repository.
 
-```shell
-cmake -B build && cmake --build build
-```
+This repository is set up to build with `colcon` using the `ament_cmake`
+backend. If this repository is inside a ROS 2 workspace, run `colcon build` from
+the top level of the ROS 2 workspace.
 
 ### (Optional) Run YOLO Checks
 
-After the virtual environment is initialized you can activate it by running
+After the virtual environment is initialized, you can run YOLO status checks
+using `poetry run yolo check`. You should see output similar to below:
 
 ```shell
-poetry shell
-```
-
-Then, run YOLO status checks using `yolo check`. You should see output similar
-to below:
-
-```shell
-$ yolo check
+$ poetry run yolo check
 Ultralytics YOLOv8.0.200 🚀 Python-3.10.13 torch-2.1.0+cu118 CUDA:0 (NVIDIA RTX A2000 12GB, 12017MiB)
 Setup complete ✅ (24 CPUs, 31.0 GB RAM, 53.8/198.7 GB disk)
 
@@ -77,21 +68,27 @@ py-cpuinfo          ✅ 9.0.0
 thop                ✅ 0.1.1-2209072238>=0.1.1
 ```
 
-## Running ROS Nodes
+### Running ROS Nodes
 
+All ROS nodes are Python modules that must run within the virtual environment.
 There are multiple ways to run ROS nodes depending on context.
 
-### Launch Files
+#### Launch Files
 
-If you are in a catkin workspace, source `devel/setup.$(basename $SHELL)` in the
-top level of the workspace and then run `roslaunch yolov8-ros $LAUNCH_FILE_NAME`,
-where `$LAUNCH_FILE_NAME` is the name of one of the files in
-[`launch/`](/launch/).
+If this repository is inside a ROS 2 workspace, use the following commands at
+the top level of the workspace.
 
-### Direct Invocation
+```shell
+source install/setup.$(basename $SHELL)
 
-Using the virtual environment directly is sometimes easier for prototyping and
-testing. From the top level of this repository,
+# Replace LAUNCH_FILE_NAME with one of the files in launch/
+ros2 launch yolov8_ros LAUNCH_FILE_NAME
+```
+
+#### Direct Invocation
+
+Running nodes directly with Python may be useful for development and testing.
+Use the following commands from the top level of this repository.
 
 ```shell
 # Activate the virtual environment

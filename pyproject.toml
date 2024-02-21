@@ -1,6 +1,6 @@
 [tool.poetry]
-name = "yolov8-ros"
-version = "0.1.0"
+name = "yolov8_ros"
+version = "0.0.0"
 description = ""
 authors = ["Elvin Yang <eyy@umich.edu>"]
 readme = "README.md"
